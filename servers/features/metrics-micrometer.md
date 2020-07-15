@@ -123,3 +123,40 @@ install(MicrometerMetrics) {
 }
 ```
 
+### Exposing metrics on an endpoint
+To expose the metrics, you can add a route when installing the feature. This way 
+other services can scrape your application metrics.  
+```kotlin
+install(MicrometerMetrics) {
+    registry = SimpleMeterRegistry()
+    routing{
+        route("/metrics"){
+            get{
+                call.respond(mapOf("meters" to registry.meters.associate {
+                    it.id.name to it.measure().map { measurement -> 
+                        mapOf(measurement.statistic to measurement.value) 
+                    }
+                }))
+            }
+        }
+    }
+}
+
+```
+When using the Prometheus metrics registry, simply call the scrape method:
+
+```kotlin
+install(MicrometerMetrics) {
+    registry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+
+    routing{
+        route("/metrics"){
+            get{
+                call.respondText((registry as PrometheusMeterRegistry).scrape())
+            }
+        }
+    }
+}
+```
+
+
